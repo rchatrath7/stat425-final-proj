@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1576287925727.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "4E71CFE",
+    "lastKnownWriteTime" : 1576289772,
+    "last_content_update" : 1576289939320,
+    "path" : "~/Documents/UIUC/STAT 425/final_proj/model_script.R",
+    "project_path" : "model_script.R",
+    "properties" : {
+        "cursorPosition" : "108,0",
+        "scrollLine" : "79",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

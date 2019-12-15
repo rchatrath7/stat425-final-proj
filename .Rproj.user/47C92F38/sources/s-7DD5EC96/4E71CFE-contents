@@ -1,0 +1,108 @@
+library(tidyverse)
+library(caret)
+library(doParallel)
+
+train_raw <- read_csv("data/train.csv.zip")
+weather <- read_csv("data/weather.csv")
+
+test_raw <- read_csv("data/test.csv")
+key <- read.csv("data/key.csv")
+
+join_table = function(input, key, weather) {
+  return(
+    input %>%  
+      left_join(key, by = "store_nbr") %>% 
+      inner_join(weather, by = c("station_nbr" = "station_nbr", "date" = "date")) %>% 
+      select(-station_nbr)
+  )
+}
+
+train <- join_table(train_raw, key, weather)
+test <- join_table(test_raw, key, weather)
+
+train_typed <- mutate(train, id = as.factor(paste(store_nbr, item_nbr, date, sep = "_"))) %>% 
+  mutate(units = as.numeric(units)) %>%  
+  filter(units > 0) %>% 
+  mutate(
+    tmin = as.numeric(tmin), 
+    tmax = as.numeric(tmax), 
+    tavg = as.numeric(tavg), 
+    depart = as.numeric(depart), 
+    dewpoint = as.numeric(dewpoint), 
+    wetbulb = as.numeric(wetbulb), 
+    heat = as.numeric(heat), 
+    cool = as.numeric(cool), 
+    sunrise = as.factor(sunrise), 
+    sunset = as.factor(sunset), 
+    codesum = as.factor(codesum), 
+    snowfall = as.numeric(snowfall), 
+    preciptotal = as.numeric(preciptotal), 
+    stnpressure = as.numeric(stnpressure), 
+    sealevel = as.numeric(sealevel), 
+    resultspeed = as.numeric(resultspeed), 
+    resultdir = as.numeric(resultdir), 
+    avgspeed = as.numeric(avgspeed), 
+    store_nbr = as.factor(store_nbr), 
+    item_nbr = as.factor(item_nbr)
+  )
+
+test_typed <- mutate(test, id = as.factor(paste(store_nbr, item_nbr, date, sep = "_"))) %>% 
+  mutate(
+    tmin = as.numeric(tmin), 
+    tmax = as.numeric(tmax), 
+    tavg = as.numeric(tavg), 
+    depart = as.numeric(depart), 
+    dewpoint = as.numeric(dewpoint), 
+    wetbulb = as.numeric(wetbulb), 
+    heat = as.numeric(heat), 
+    cool = as.numeric(cool), 
+    sunrise = as.factor(sunrise), 
+    sunset = as.factor(sunset), 
+    codesum = as.factor(codesum), 
+    snowfall = as.numeric(snowfall), 
+    preciptotal = as.numeric(preciptotal), 
+    stnpressure = as.numeric(stnpressure), 
+    sealevel = as.numeric(sealevel), 
+    resultspeed = as.numeric(resultspeed), 
+    resultdir = as.numeric(resultdir), 
+    avgspeed = as.numeric(avgspeed), 
+    store_nbr = as.factor(store_nbr), 
+    item_nbr = as.factor(item_nbr)
+  )
+
+save(train_typed, file = "data/train.Rda")
+save(test_typed, file = "data/test.Rda")
+
+load("data/train.Rda")
+load("data/test.Rda")
+
+cl <- makePSOCKcluster(16)
+registerDoParallel(cl)
+
+base_linear_mod = train(
+  units ~ ., 
+  data = train_typed %>% select(-id, -date, -codesum), 
+  method = "lm"
+)
+
+stopCluster(cl)
+
+p = predict(base_linear_mod, test_typed)
+
+sub = tibble(
+  id = test_typed$id
+)
+
+pred = tibble(
+  units = p, 
+  idx = as.numeric(names(p))
+)
+
+sub_join = sub %>% mutate(idx = as.numeric(rownames(sub))) %>% left_join(pred, by = 'idx')
+sub_join = sub_join %>% 
+  mutate(units = replace_na(units, 0)) %>% 
+  mutate(units = ifelse(units < 0, 0, units))
+  select(-idx)
+
+sub_join %>% 
+  write.csv('data/submission.csv', row.names=FALSE)
